@@ -583,6 +583,13 @@ function onHobbyClick(item) {
 }
 
 function onGameKeydown(e) {
+  if (showPhotoModal.value) {
+    if (e.key === 'Escape') {
+      closePhotoModal()
+    }
+    return
+  }
+
   if (!showTetris.value) return
 
   const key = e.key
@@ -662,6 +669,7 @@ function onProfilePhotoUpload(event) {
   profilePhotoObjectUrl = URL.createObjectURL(file)
   profilePhotoUrl.value = profilePhotoObjectUrl
   profilePhotoName.value = file.name
+  closePhotoModal()
 }
 
 function resetProfilePhoto() {
@@ -753,6 +761,10 @@ onBeforeUnmount(() => {
     URL.revokeObjectURL(customBackgroundObjectUrl)
     customBackgroundObjectUrl = ''
   }
+  if (profilePhotoObjectUrl) {
+    URL.revokeObjectURL(profilePhotoObjectUrl)
+    profilePhotoObjectUrl = ''
+  }
 })
 </script>
 
@@ -791,10 +803,18 @@ onBeforeUnmount(() => {
 
         <article class="photo-card liquid-panel reveal">
           <h3>个人照片</h3>
-          <div class="photo-slot">
-            <span>Photo Placeholder</span>
-            <small>可放你的头像或生活照<br />建议尺寸：4:5</small>
+          <div
+            class="photo-slot photo-slot-clickable"
+            role="button"
+            tabindex="0"
+            @click="openPhotoModal"
+            @keydown.enter.prevent="openPhotoModal"
+            @keydown.space.prevent="openPhotoModal"
+          >
+            <img class="profile-photo" :src="profilePhotoUrl" alt="李佳俊头像" />
+            <div class="photo-slot-overlay">点击更换照片</div>
           </div>
+          <p class="photo-meta">当前头像：{{ profilePhotoName }}</p>
         </article>
       </div>
 
@@ -987,4 +1007,20 @@ onBeforeUnmount(() => {
       </div>
     </section>
   </main>
+
+  <div v-if="showPhotoModal" class="photo-modal-backdrop" @click.self="closePhotoModal">
+    <article class="photo-modal liquid-panel">
+      <h3>上传个人照片</h3>
+      <p>只在当前浏览器本地预览，不会上传到公网。</p>
+      <div class="upload-row">
+        <label class="upload-btn">
+          选择本地图片
+          <input ref="photoInput" type="file" accept="image/*" @change="onProfilePhotoUpload" />
+        </label>
+        <button class="tiny-btn" @click="resetProfilePhoto">恢复默认</button>
+        <button class="tiny-btn" @click="closePhotoModal">关闭</button>
+      </div>
+      <p class="upload-meta">当前头像：{{ profilePhotoName }}</p>
+    </article>
+  </div>
 </template>

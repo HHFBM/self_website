@@ -166,18 +166,46 @@ h2 {
   min-height: 320px;
   border: 1px dashed rgba(47, 109, 159, 0.4);
   border-radius: 0.85rem;
-  display: grid;
-  place-content: center;
-  text-align: center;
+  position: relative;
+  overflow: hidden;
   background: linear-gradient(155deg, rgba(255, 255, 255, 0.5), rgba(187, 224, 250, 0.3));
-  padding: 1rem;
-  gap: 0.45rem;
 }
 
-.photo-slot span {
+.photo-slot-clickable {
+  cursor: pointer;
+}
+
+.profile-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-slot-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.65rem 0.8rem;
   font-family: 'Outfit', sans-serif;
   font-weight: 700;
-  color: #25557d;
+  color: #f3fbff;
+  background: linear-gradient(180deg, rgba(8, 31, 48, 0), rgba(8, 31, 48, 0.72));
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.photo-slot-clickable:hover .photo-slot-overlay,
+.photo-slot-clickable:focus-visible .photo-slot-overlay {
+  opacity: 1;
+}
+
+.photo-meta {
+  margin-top: 0.55rem !important;
+  color: #2f5a80 !important;
+  font-size: 0.88rem;
 }
 
 .cta-row {
@@ -448,6 +476,30 @@ h2 {
   color: #2f5a80 !important;
 }
 
+.photo-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(4, 18, 29, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.photo-modal {
+  width: min(560px, 100%);
+  padding: 1rem;
+}
+
+.photo-modal h3 {
+  margin: 0;
+}
+
+.photo-modal p {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+}
+
 .tetris-panel {
   margin-top: 1rem;
   padding: 1rem;
@@ -697,6 +749,10 @@ h2 {
   }
 
   .photo-slot {
+    min-height: 240px;
+  }
+
+  .profile-photo {
     min-height: 240px;
   }
 
