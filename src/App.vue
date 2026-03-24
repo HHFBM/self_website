@@ -215,6 +215,7 @@ const isGameOver = ref(false)
 const fastDrop = ref(false)
 const score = ref(0)
 const linesCleared = ref(0)
+const rotationDirection = ref('clockwise')
 
 let cleanupHeroTilt = null
 let revealObserver = null
@@ -451,11 +452,27 @@ function rotateMatrixClockwise(matrix) {
   return rotated
 }
 
-function rotateCurrentPiece() {
+function rotateMatrixCounterClockwise(matrix) {
+  const rows = matrix.length
+  const cols = matrix[0].length
+  const rotated = Array.from({ length: cols }, () => Array(rows).fill(0))
+
+  for (let r = 0; r < rows; r += 1) {
+    for (let c = 0; c < cols; c += 1) {
+      rotated[cols - 1 - c][r] = matrix[r][c]
+    }
+  }
+
+  return rotated
+}
+
+function rotateCurrentPiece(clockwise = true) {
   const piece = currentPiece.value
   if (!piece || isGameOver.value) return
 
-  const rotated = rotateMatrixClockwise(piece.matrix)
+  const rotated = clockwise
+    ? rotateMatrixClockwise(piece.matrix)
+    : rotateMatrixCounterClockwise(piece.matrix)
   const kicks = [0, -1, 1, -2, 2]
 
   for (const offset of kicks) {
@@ -530,6 +547,7 @@ function restartTetrisGame() {
   isGameOver.value = false
   isGameRunning.value = true
   fastDrop.value = false
+  rotationDirection.value = 'clockwise'
   spawnPiece()
   startGameLoop()
 }
@@ -578,18 +596,19 @@ function onGameKeydown(e) {
   } else if (key === 'ArrowRight') {
     tryMove(1, 0)
   } else if (key === 'ArrowDown') {
-    tryMove(0, 1)
-  } else if (key === 'ArrowUp') {
-    hardDrop()
-  } else if (key === ' ') {
     fastDrop.value = true
+  } else if (key === 'ArrowUp') {
+    rotationDirection.value =
+      rotationDirection.value === 'clockwise' ? 'counterclockwise' : 'clockwise'
+  } else if (key === ' ') {
+    hardDrop()
   } else if (key === 'r' || key === 'R') {
-    rotateCurrentPiece()
+    rotateCurrentPiece(rotationDirection.value === 'clockwise')
   }
 }
 
 function onGameKeyup(e) {
-  if (e.key === ' ') {
+  if (e.key === 'ArrowDown') {
     fastDrop.value = false
   }
 }
@@ -827,7 +846,7 @@ onBeforeUnmount(() => {
         <div class="tetris-head">
           <div>
             <h3>Tetris 彩蛋已启动</h3>
-            <p>方向键控制移动，空格按住加速下落，R 旋转方块。上方向键为快速到底。</p>
+            <p>方向键控制移动：上键切换旋转方向、下键按住加速、空格直接落下，R 按当前方向旋转。</p>
           </div>
           <div class="tetris-actions">
             <button class="tiny-btn" @click="restartTetrisGame">重新开始</button>
@@ -860,10 +879,14 @@ onBeforeUnmount(() => {
             </div>
             <div class="liquid-subpanel control-note">
               <p>← →：左右移动</p>
-              <p>↓：下移一格</p>
-              <p>↑：快速到底</p>
-              <p>Space：加速下落</p>
-              <p>R：旋转方块</p>
+              <p>↑：切换旋转方向</p>
+              <p>↓：按住加速下落</p>
+              <p>Space：直接落下</p>
+              <p>R：按当前方向旋转</p>
+            </div>
+            <div class="tetris-stat liquid-subpanel">
+              <span>旋转方向</span>
+              <strong>{{ rotationDirection === 'clockwise' ? '顺时针' : '逆时针' }}</strong>
             </div>
             <div v-if="isGameOver" class="game-over liquid-subpanel">
               <p>Game Over</p>
