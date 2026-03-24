@@ -104,6 +104,16 @@ const projects = [
     bullets: ['问答准确率提升 15%–25%', '复杂问题处理稳定性显著提升'],
   },
   {
+    title: 'RAG + Deep Research 论文大纲生成（ToT）',
+    tag: ['llm'],
+    text: '结合 RAG 检索增强与 Deep Research 框架，基于 Tree of Thoughts（ToT）生成论文结构化大纲，为后续写作提供可执行指导。',
+    bullets: [
+      '构建“主题拆解 → 证据检索 → 论点扩展 → 大纲评估”流程，支持多路径推理与候选方案对比。',
+      '引入 LLM-as-Judge 进行自动评审与重写优化，提升大纲的逻辑性、完整性与可写作性。',
+      '结合 DeepResearchBench 指标体系进行 benchmark 落地，综合评分稳定达到 90 分以上。',
+    ],
+  },
+  {
     title: 'AlphaFold + ProteinX 蛋白质结构预测',
     tag: ['llm', 'bio'],
     text: '在多卡集群进行 SFT / DPO 训练与结构分类流程整合，贯通 Supfam、Dali 等工具链。',
