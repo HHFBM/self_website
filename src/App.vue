@@ -67,6 +67,7 @@ const navItems = [
   { id: 'experience', label: '经历' },
   { id: 'projects', label: '项目' },
   { id: 'hobbies', label: '爱好' },
+  { id: 'upload', label: '上传' },
   { id: 'contact', label: '联系' },
 ]
 
@@ -201,6 +202,9 @@ const activeSection = ref('hero')
 const activeExperience = ref(experiences[0].id)
 const statValues = ref(stats.map(() => 0))
 const heroCard = ref(null)
+const uploadInput = ref(null)
+const customBackgroundUrl = ref('')
+const customBackgroundName = ref('')
 
 const showTetris = ref(false)
 const board = ref(createEmptyBoard())
@@ -218,12 +222,23 @@ let statsObserver = null
 let animationFrameId = null
 let lastFrameTime = 0
 let dropAccumulator = 0
+let customBackgroundObjectUrl = ''
 
 const level = computed(() => Math.floor(linesCleared.value / 10) + 1)
 
 const filteredProjects = computed(() => {
   if (filter.value === 'all') return projects
   return projects.filter(p => p.tag.includes(filter.value))
+})
+
+const sceneBackgroundStyle = computed(() => {
+  if (!customBackgroundUrl.value) return {}
+  return {
+    backgroundImage: `linear-gradient(125deg, rgba(7, 24, 42, 0.42), rgba(17, 63, 95, 0.22)), url(${customBackgroundUrl.value})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+  }
 })
 
 const displayBoard = computed(() => {
@@ -590,6 +605,31 @@ function getCellStyle(cellValue) {
   }
 }
 
+function onLocalBackgroundUpload(event) {
+  const file = event.target.files?.[0]
+  if (!file || !file.type.startsWith('image/')) return
+
+  if (customBackgroundObjectUrl) {
+    URL.revokeObjectURL(customBackgroundObjectUrl)
+  }
+
+  customBackgroundObjectUrl = URL.createObjectURL(file)
+  customBackgroundUrl.value = customBackgroundObjectUrl
+  customBackgroundName.value = file.name
+}
+
+function clearLocalBackground() {
+  if (customBackgroundObjectUrl) {
+    URL.revokeObjectURL(customBackgroundObjectUrl)
+  }
+  customBackgroundObjectUrl = ''
+  customBackgroundUrl.value = ''
+  customBackgroundName.value = ''
+  if (uploadInput.value) {
+    uploadInput.value.value = ''
+  }
+}
+
 onMounted(() => {
   window.addEventListener('pointermove', setPointerGlow, { passive: true })
   window.addEventListener('scroll', markActiveSection, { passive: true })
@@ -638,11 +678,15 @@ onBeforeUnmount(() => {
   revealObserver?.disconnect()
   statsObserver?.disconnect()
   stopGameLoop()
+  if (customBackgroundObjectUrl) {
+    URL.revokeObjectURL(customBackgroundObjectUrl)
+    customBackgroundObjectUrl = ''
+  }
 })
 </script>
 
 <template>
-  <div class="scene-bg"></div>
+  <div class="scene-bg" :class="{ 'with-upload': !!customBackgroundUrl }" :style="sceneBackgroundStyle"></div>
   <div class="grain"></div>
 
   <header class="topbar liquid-panel reveal visible">
@@ -827,6 +871,25 @@ onBeforeUnmount(() => {
             </div>
           </aside>
         </div>
+      </article>
+    </section>
+
+    <section id="upload" class="section reveal">
+      <h2>上传内容</h2>
+      <article class="upload-panel liquid-panel">
+        <p>
+          你可以从本地选择一张图片作为页面背景。图片仅在当前浏览器本地渲染，不会上传到公网或仓库。
+        </p>
+        <div class="upload-row">
+          <label class="upload-btn">
+            选择本地图片
+            <input ref="uploadInput" type="file" accept="image/*" @change="onLocalBackgroundUpload" />
+          </label>
+          <button class="tiny-btn" :disabled="!customBackgroundUrl" @click="clearLocalBackground">
+            清除背景
+          </button>
+        </div>
+        <p v-if="customBackgroundName" class="upload-meta">当前背景：{{ customBackgroundName }}</p>
       </article>
     </section>
 

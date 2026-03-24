@@ -39,6 +39,10 @@ body {
   filter: blur(12px);
 }
 
+.scene-bg.with-upload {
+  filter: none;
+}
+
 .grain {
   position: fixed;
   inset: 0;
@@ -404,6 +408,46 @@ h2 {
   transform: translateY(-4px) scale(1.01);
 }
 
+.upload-panel {
+  padding: 1rem;
+}
+
+.upload-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.72;
+}
+
+.upload-row {
+  margin-top: 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.upload-btn {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  color: #1a4468;
+  font-weight: 700;
+  padding: 0.52rem 0.95rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.upload-btn input {
+  display: none;
+}
+
+.upload-meta {
+  margin-top: 0.7rem !important;
+  font-size: 0.9rem;
+  color: #2f5a80 !important;
+}
+
 .tetris-panel {
   margin-top: 1rem;
   padding: 1rem;
@@ -443,6 +487,11 @@ h2 {
 
 .tiny-btn:hover {
   background: rgba(190, 230, 255, 0.64);
+}
+
+.tiny-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .tetris-wrap {
