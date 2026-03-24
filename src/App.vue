@@ -212,16 +212,6 @@ const profilePhotoUrl = ref(defaultProfilePhoto)
 const profilePhotoName = ref('默认照片')
 const isPhotoLocked = ref(false)
 const lastUploadedPhotoDataUrl = ref('')
-const aiPartnerInput = ref(null)
-const aiPartnerFile = ref(null)
-const aiPartnerPreviewUrl = ref('')
-const aiPrompt = ref('自然合照，真实肤色，细节清晰，光照协调')
-const aiStylePreset = ref('realistic')
-const aiState = ref('idle')
-const aiError = ref('')
-const aiResultUrl = ref('')
-const aiResultMimeType = ref('')
-const aiResultSource = ref('')
 
 const showTetris = ref(false)
 const board = ref(createEmptyBoard())
@@ -242,7 +232,6 @@ let lastFrameTime = 0
 let dropAccumulator = 0
 let customBackgroundObjectUrl = ''
 let profilePhotoObjectUrl = ''
-let aiPartnerPreviewObjectUrl = ''
 const PHOTO_LOCK_ENABLED_KEY = 'self_website_photo_lock_enabled'
 const PHOTO_LOCK_DATA_KEY = 'self_website_photo_lock_data'
 
@@ -251,20 +240,6 @@ const level = computed(() => Math.floor(linesCleared.value / 10) + 1)
 const filteredProjects = computed(() => {
   if (filter.value === 'all') return projects
   return projects.filter(p => p.tag.includes(filter.value))
-})
-
-const aiIsBusy = computed(() => ['validating', 'uploading', 'generating'].includes(aiState.value))
-
-const aiStateLabel = computed(() => {
-  const map = {
-    idle: '待上传',
-    validating: '校验中',
-    uploading: '上传中',
-    generating: '生成中',
-    success: '生成成功',
-    error: '生成失败',
-  }
-  return map[aiState.value] || '未知状态'
 })
 
 const sceneBackgroundStyle = computed(() => {
@@ -788,102 +763,6 @@ function togglePhotoLock() {
   }
 }
 
-function resetAiState(keepPartner = true) {
-  aiState.value = 'idle'
-  aiError.value = ''
-  aiResultUrl.value = ''
-  aiResultMimeType.value = ''
-  aiResultSource.value = ''
-  if (!keepPartner) {
-    aiPartnerFile.value = null
-    if (aiPartnerPreviewObjectUrl) {
-      URL.revokeObjectURL(aiPartnerPreviewObjectUrl)
-      aiPartnerPreviewObjectUrl = ''
-    }
-    aiPartnerPreviewUrl.value = ''
-    if (aiPartnerInput.value) {
-      aiPartnerInput.value.value = ''
-    }
-  }
-}
-
-function onAiPartnerUpload(event) {
-  const file = event.target.files?.[0]
-  if (!file || !file.type.startsWith('image/')) return
-
-  aiPartnerFile.value = file
-  if (aiPartnerPreviewObjectUrl) {
-    URL.revokeObjectURL(aiPartnerPreviewObjectUrl)
-  }
-  aiPartnerPreviewObjectUrl = URL.createObjectURL(file)
-  aiPartnerPreviewUrl.value = aiPartnerPreviewObjectUrl
-
-  if (aiState.value === 'error' || aiState.value === 'success') {
-    resetAiState(true)
-  }
-}
-
-async function buildSelfImageFile() {
-  const response = await fetch(profilePhotoUrl.value)
-  if (!response.ok) {
-    throw new Error('读取当前头像失败，请重新上传头像后再试。')
-  }
-  const blob = await response.blob()
-  return new File([blob], 'self_photo.jpg', { type: blob.type || 'image/jpeg' })
-}
-
-async function generateAiCoPhoto() {
-  if (!aiPartnerFile.value) {
-    aiState.value = 'error'
-    aiError.value = '请先上传访客照片。'
-    return
-  }
-
-  try {
-    aiState.value = 'validating'
-    aiError.value = ''
-    aiResultUrl.value = ''
-    aiResultMimeType.value = ''
-    aiResultSource.value = ''
-
-    const selfFile = await buildSelfImageFile()
-    const formData = new FormData()
-    formData.append('self_image', selfFile)
-    formData.append('partner_image', aiPartnerFile.value)
-    formData.append('prompt', aiPrompt.value)
-    formData.append('style_preset', aiStylePreset.value)
-
-    aiState.value = 'uploading'
-    const response = await fetch('/api/v1/ai-photo/generate', {
-      method: 'POST',
-      body: formData,
-    })
-
-    aiState.value = 'generating'
-    const data = await response.json()
-    if (!response.ok) {
-      throw new Error(data?.error?.message || '后端生成失败，请稍后重试。')
-    }
-
-    if (data.image_base64) {
-      const mimeType = data.mime_type || 'image/png'
-      aiResultUrl.value = `data:${mimeType};base64,${data.image_base64}`
-      aiResultMimeType.value = mimeType
-    } else if (data.image_url) {
-      aiResultUrl.value = data.image_url
-      aiResultMimeType.value = data.mime_type || ''
-    } else {
-      throw new Error('接口未返回有效图片结果。')
-    }
-
-    aiResultSource.value = data?.meta?.provider || 'unknown'
-    aiState.value = 'success'
-  } catch (error) {
-    aiState.value = 'error'
-    aiError.value = error instanceof Error ? error.message : '生成失败，请稍后重试。'
-  }
-}
-
 function onLocalBackgroundUpload(event) {
   const file = event.target.files?.[0]
   if (!file || !file.type.startsWith('image/')) return
@@ -965,10 +844,6 @@ onBeforeUnmount(() => {
   if (profilePhotoObjectUrl) {
     URL.revokeObjectURL(profilePhotoObjectUrl)
     profilePhotoObjectUrl = ''
-  }
-  if (aiPartnerPreviewObjectUrl) {
-    URL.revokeObjectURL(aiPartnerPreviewObjectUrl)
-    aiPartnerPreviewObjectUrl = ''
   }
 })
 </script>
@@ -1200,55 +1075,6 @@ onBeforeUnmount(() => {
           </button>
         </div>
         <p v-if="customBackgroundName" class="upload-meta">当前背景：{{ customBackgroundName }}</p>
-      </article>
-
-      <article class="upload-panel liquid-panel ai-panel">
-        <h3>AI 合照生成（后端代理模板）</h3>
-        <p>
-          上传访客照片后，将与当前头像一起提交到后端代理接口。后端再调用外部大模型 API 返回合照。
-        </p>
-        <div class="upload-row">
-          <label class="upload-btn">
-            上传访客照片
-            <input ref="aiPartnerInput" type="file" accept="image/*" @change="onAiPartnerUpload" />
-          </label>
-          <button class="tiny-btn" :disabled="aiIsBusy || !aiPartnerFile" @click="generateAiCoPhoto">
-            {{ aiIsBusy ? '生成中...' : '生成合照' }}
-          </button>
-          <button class="tiny-btn" :disabled="aiIsBusy" @click="resetAiState(false)">重置流程</button>
-        </div>
-
-        <div class="ai-config-grid">
-          <label class="ai-field">
-            <span>风格</span>
-            <select v-model="aiStylePreset">
-              <option value="realistic">写实</option>
-              <option value="cinematic">电影感</option>
-              <option value="casual">日常生活感</option>
-            </select>
-          </label>
-          <label class="ai-field ai-field-wide">
-            <span>提示词</span>
-            <input v-model="aiPrompt" type="text" placeholder="例如：自然合照，真实光照，细节清晰" />
-          </label>
-        </div>
-
-        <p class="upload-meta">状态：{{ aiStateLabel }}</p>
-        <p v-if="aiError" class="upload-meta ai-error">{{ aiError }}</p>
-        <p v-if="aiResultSource" class="upload-meta">生成来源：{{ aiResultSource }}</p>
-
-        <div class="ai-preview-grid">
-          <div class="ai-preview-card">
-            <p>访客照片</p>
-            <img v-if="aiPartnerPreviewUrl" :src="aiPartnerPreviewUrl" alt="访客上传照片预览" />
-            <div v-else class="ai-placeholder">等待上传</div>
-          </div>
-          <div class="ai-preview-card">
-            <p>AI 合照结果</p>
-            <img v-if="aiResultUrl" :src="aiResultUrl" alt="AI 合照结果" />
-            <div v-else class="ai-placeholder">等待生成</div>
-          </div>
-        </div>
       </article>
     </section>
 
