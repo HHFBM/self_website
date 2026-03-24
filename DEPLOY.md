@@ -1,34 +1,29 @@
-# 发布说明（GitHub Pages + Cloudflare）
+# 发布说明（Vue + Vite + GitHub Pages）
 
-## 1. 推送到 GitHub
+## 1. 本地开发
 ```bash
 cd /Users/jason/Documents/personal-site-mvp
-git init
-git add .
-git commit -m "setup github pages deploy"
-git branch -M main
-git remote add origin https://github.com/<your-username>/<your-repo>.git
-git push -u origin main
+npm install
+npm run dev
 ```
 
-## 2. 开启 GitHub Pages（Actions 模式）
+## 2. 发布方式
+仓库已配置 `.github/workflows/deploy-pages.yml`，每次 push 到 `main` 会自动：
+1. 安装依赖（`npm ci`）
+2. 构建站点（`npm run build`）
+3. 发布 `dist` 到 GitHub Pages
+
+## 3. GitHub Pages 设置
 1. 打开仓库 `Settings -> Pages`
 2. `Source` 选择 `GitHub Actions`
-3. 等待 workflow `Deploy Site to GitHub Pages` 成功
+3. 等待工作流 `Deploy Site to GitHub Pages` 成功
 
-## 3. 修改 CNAME
-把根目录 `CNAME` 文件中的 `www.your-domain.com` 改成你的真实域名再 push。
+## 4. 当前公网地址
+默认访问地址：`https://hhfbm.github.io/self_website/`
 
-## 4. Cloudflare DNS 配置
-- `www` 记录：`CNAME` 到 `<your-username>.github.io`（可开启代理）
-- 根域 `@`：
-  - 方案 A：`A` 记录到 `185.199.108.153`
-  - 方案 B：`A` 记录到 `185.199.109.153`
-  - 方案 C：`A` 记录到 `185.199.110.153`
-  - 方案 D：`A` 记录到 `185.199.111.153`
-
-## 5. HTTPS
-在 GitHub Pages 设置中开启 `Enforce HTTPS`。
-
-## 6. 后续更新
-每次 `git push` 到 `main` 都会自动触发重新发布。
+## 5. 自定义域名（可选）
+如果需要绑定域名：
+1. 新建 `public/CNAME`，内容写你的域名（例如 `www.example.com`）
+2. push 到 `main`
+3. 在 Cloudflare DNS 中把 `www` CNAME 到 `hhfbm.github.io`
+4. 在 Pages 设置中开启 `Enforce HTTPS`
