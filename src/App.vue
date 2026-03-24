@@ -210,6 +210,8 @@ const customBackgroundName = ref('')
 const showPhotoModal = ref(false)
 const profilePhotoUrl = ref(defaultProfilePhoto)
 const profilePhotoName = ref('默认照片')
+const isPhotoLocked = ref(false)
+const lastUploadedPhotoDataUrl = ref('')
 
 const showTetris = ref(false)
 const board = ref(createEmptyBoard())
@@ -230,6 +232,8 @@ let lastFrameTime = 0
 let dropAccumulator = 0
 let customBackgroundObjectUrl = ''
 let profilePhotoObjectUrl = ''
+const PHOTO_LOCK_ENABLED_KEY = 'self_website_photo_lock_enabled'
+const PHOTO_LOCK_DATA_KEY = 'self_website_photo_lock_data'
 
 const level = computed(() => Math.floor(linesCleared.value / 10) + 1)
 
@@ -650,6 +654,49 @@ function getCellStyle(cellValue) {
   }
 }
 
+function persistPhotoLockState() {
+  try {
+    localStorage.setItem(PHOTO_LOCK_ENABLED_KEY, isPhotoLocked.value ? '1' : '0')
+  } catch {
+    // Ignore storage write errors.
+  }
+}
+
+function persistLockedPhotoData(dataUrl, name) {
+  try {
+    localStorage.setItem(PHOTO_LOCK_DATA_KEY, JSON.stringify({ dataUrl, name }))
+  } catch {
+    // Ignore storage write errors.
+  }
+}
+
+function clearLockedPhotoData() {
+  try {
+    localStorage.removeItem(PHOTO_LOCK_DATA_KEY)
+  } catch {
+    // Ignore storage write errors.
+  }
+}
+
+function restoreLockedPhoto() {
+  try {
+    isPhotoLocked.value = localStorage.getItem(PHOTO_LOCK_ENABLED_KEY) === '1'
+    if (!isPhotoLocked.value) return
+
+    const raw = localStorage.getItem(PHOTO_LOCK_DATA_KEY)
+    if (!raw) return
+
+    const parsed = JSON.parse(raw)
+    if (!parsed?.dataUrl || typeof parsed.dataUrl !== 'string') return
+
+    profilePhotoUrl.value = parsed.dataUrl
+    profilePhotoName.value = parsed.name || '本地锁定头像'
+    lastUploadedPhotoDataUrl.value = parsed.dataUrl
+  } catch {
+    // Ignore storage parse/read errors.
+  }
+}
+
 function openPhotoModal() {
   showPhotoModal.value = true
 }
@@ -669,6 +716,17 @@ function onProfilePhotoUpload(event) {
   profilePhotoObjectUrl = URL.createObjectURL(file)
   profilePhotoUrl.value = profilePhotoObjectUrl
   profilePhotoName.value = file.name
+
+  const reader = new FileReader()
+  reader.onload = () => {
+    if (typeof reader.result !== 'string') return
+    lastUploadedPhotoDataUrl.value = reader.result
+    if (isPhotoLocked.value) {
+      persistLockedPhotoData(reader.result, file.name)
+    }
+  }
+  reader.readAsDataURL(file)
+
   closePhotoModal()
 }
 
@@ -679,8 +737,29 @@ function resetProfilePhoto() {
   }
   profilePhotoUrl.value = defaultProfilePhoto
   profilePhotoName.value = '默认照片'
+  lastUploadedPhotoDataUrl.value = ''
+  clearLockedPhotoData()
   if (photoInput.value) {
     photoInput.value.value = ''
+  }
+}
+
+function togglePhotoLock() {
+  isPhotoLocked.value = !isPhotoLocked.value
+  persistPhotoLockState()
+
+  if (!isPhotoLocked.value) {
+    clearLockedPhotoData()
+    return
+  }
+
+  if (lastUploadedPhotoDataUrl.value) {
+    persistLockedPhotoData(lastUploadedPhotoDataUrl.value, profilePhotoName.value)
+    return
+  }
+
+  if (profilePhotoUrl.value.startsWith('data:image/')) {
+    persistLockedPhotoData(profilePhotoUrl.value, profilePhotoName.value)
   }
 }
 
@@ -710,6 +789,7 @@ function clearLocalBackground() {
 }
 
 onMounted(() => {
+  restoreLockedPhoto()
   window.addEventListener('pointermove', setPointerGlow, { passive: true })
   window.addEventListener('scroll', markActiveSection, { passive: true })
   window.addEventListener('keydown', onGameKeydown)
@@ -814,7 +894,12 @@ onBeforeUnmount(() => {
             <img class="profile-photo" :src="profilePhotoUrl" alt="李佳俊头像" />
             <div class="photo-slot-overlay">点击更换照片</div>
           </div>
-          <p class="photo-meta">当前头像：{{ profilePhotoName }}</p>
+          <div class="photo-meta-row">
+            <p class="photo-meta">当前头像：{{ profilePhotoName }}</p>
+            <button class="tiny-btn lock-btn" :class="{ active: isPhotoLocked }" @click="togglePhotoLock">
+              {{ isPhotoLocked ? '🔒 已锁定（本地）' : '🔓 本地锁定头像' }}
+            </button>
+          </div>
         </article>
       </div>
 
@@ -1021,6 +1106,7 @@ onBeforeUnmount(() => {
         <button class="tiny-btn" @click="closePhotoModal">关闭</button>
       </div>
       <p class="upload-meta">当前头像：{{ profilePhotoName }}</p>
+      <p class="upload-meta">状态：{{ isPhotoLocked ? '已启用本地锁定（刷新后保留）' : '未锁定（刷新后恢复默认）' }}</p>
     </article>
   </div>
 </template>
