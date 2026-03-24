@@ -1086,7 +1086,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <div class="contact-row">
-        <a href="mailto:jiajun8980363@163.com">jiajun8980363@163.com</a>
+        <a href="mailto:jiajun894480363@163.com">jiajun894480363@163.com</a>
         <a href="mailto:894480363@qq.com">894480363@qq.com</a>
         <a href="tel:+8615399419326">+86 153-9941-9326</a>
       </div>
