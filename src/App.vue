@@ -6,6 +6,7 @@ const navItems = [
   { id: 'about', label: '关于' },
   { id: 'experience', label: '经历' },
   { id: 'projects', label: '项目' },
+  { id: 'hobbies', label: '爱好' },
   { id: 'contact', label: '联系' },
 ]
 
@@ -38,14 +39,66 @@ const projects = [
 
 const experiences = [
   {
+    id: 'exp-1',
     role: '算法实习生 · 西安朝野未来科技',
     time: '2025.12 - 2026.06',
-    desc: '参与 AI Agent 与 Deep Research 模块研发，完成 RAG + ToT 推理闭环和自动评测机制落地。',
+    summary: 'AI Agent 与 Deep Research 模块研发，构建 RAG + 推理闭环。',
+    details: [
+      '搭建 Query → Retrieval → Generation 流程，融合 BM25 与向量检索。',
+      '设计“语义拆分 → 检索 → 生成 → 评估 → 重写”的推理闭环。',
+      '引入 LLM-as-Judge 自动评测机制，提升结构合规与答案稳定性。',
+    ],
   },
   {
+    id: 'exp-2',
+    role: 'MSc · University College London',
+    time: '2024 - 2025',
+    summary: 'Scientific Data Intensive Computing（Merit），方向聚焦高性能计算与机器学习。',
+    details: [
+      '课程覆盖监督学习、信息检索与数据挖掘、高性能计算等方向。',
+      '研究方向：基于 AlphaFold 与 ProteinX 的蛋白质结构预测与归类。',
+      '在课程与项目中结合算法设计与工程实现，形成端到端研发能力。',
+    ],
+  },
+  {
+    id: 'exp-3',
+    role: 'BSc · University of Liverpool',
+    time: '2021 - 2024',
+    summary: 'Computer Science（First Class Honour, Top 10%）。',
+    details: [
+      '聚焦计算机视觉、强化学习、多智能体系统与大数据分析。',
+      '毕业研究：基于 YOLOv5 与 Transformer 的目标检测性能提升。',
+      '形成从建模、训练到实验评估的完整研究流程。',
+    ],
+  },
+  {
+    id: 'exp-4',
     role: '产品开发实习生 · 神州数码信息服务',
     time: '2022.06 - 2022.08',
-    desc: '参与金融微服务系统开发与性能优化，实践 Dubbo / Spring Cloud、Redis 与分布式事务方案。',
+    summary: '参与金融微服务系统开发，接触分布式架构与事务一致性方案。',
+    details: [
+      '基于 Dubbo / Spring Cloud 参与业务模块与接口开发。',
+      '学习服务注册发现、负载均衡与 Redis 缓存优化策略。',
+      '理解 TCC / SAGA / XA 等分布式事务机制在业务中的取舍。',
+    ],
+  },
+]
+
+const hobbies = [
+  {
+    title: '足球',
+    subtitle: 'Football',
+    text: '关注比赛战术与团队协作，平时也会和朋友约球，保持节奏与专注力。',
+  },
+  {
+    title: '游戏',
+    subtitle: 'Gaming',
+    text: '偏好策略和竞技类游戏，喜欢从机制拆解和复盘中提升决策能力。',
+  },
+  {
+    title: '健身',
+    subtitle: 'Fitness',
+    text: '长期保持力量和有氧训练，稳定体能与执行力，提升长期工作状态。',
   },
 ]
 
@@ -64,6 +117,7 @@ const skills = [
 
 const filter = ref('all')
 const activeSection = ref('hero')
+const activeExperience = ref(experiences[0].id)
 const statValues = ref(stats.map(() => 0))
 const heroCard = ref(null)
 
@@ -136,6 +190,10 @@ const bindHeroTilt = () => {
   }
 }
 
+const toggleExperience = id => {
+  activeExperience.value = activeExperience.value === id ? '' : id
+}
+
 let cleanupHeroTilt = null
 let revealObserver = null
 let statsObserver = null
@@ -206,17 +264,27 @@ onBeforeUnmount(() => {
 
   <main>
     <section id="hero" class="hero section">
-      <article ref="heroCard" class="hero-card liquid-panel reveal">
-        <p class="kicker">AI Engineer / LLM Application Builder</p>
-        <h1>李佳俊 Jiajun Li</h1>
-        <p>
-          关注 LLM Agent、RAG、计算机视觉与高性能计算，擅长把研究思路快速落地成可运行系统。
-        </p>
-        <div class="cta-row">
-          <a class="btn primary" href="#projects" @click.prevent="scrollToId('projects')">查看项目</a>
-          <a class="btn ghost" href="mailto:894480363@qq.com">联系我</a>
-        </div>
-      </article>
+      <div class="hero-grid">
+        <article ref="heroCard" class="hero-card liquid-panel reveal">
+          <p class="kicker">AI Engineer / LLM Application Builder</p>
+          <h1>李佳俊 Jiajun Li</h1>
+          <p>
+            关注 LLM Agent、RAG、计算机视觉与高性能计算，擅长把研究思路快速落地成可运行系统。
+          </p>
+          <div class="cta-row">
+            <a class="btn primary" href="#projects" @click.prevent="scrollToId('projects')">查看项目</a>
+            <a class="btn ghost" href="mailto:894480363@qq.com">联系我</a>
+          </div>
+        </article>
+
+        <article class="photo-card liquid-panel reveal">
+          <h3>个人照片</h3>
+          <div class="photo-slot">
+            <span>Photo Placeholder</span>
+            <small>可放你的头像或生活照<br />建议尺寸：4:5</small>
+          </div>
+        </article>
+      </div>
 
       <ul class="stats reveal">
         <li v-for="(item, idx) in stats" :key="item.label" class="liquid-panel">
@@ -248,13 +316,30 @@ onBeforeUnmount(() => {
     </section>
 
     <section id="experience" class="section reveal">
-      <h2>经历时间线</h2>
+      <h2>个人经历时间线</h2>
       <div class="timeline">
-        <article v-for="item in experiences" :key="item.role" class="timeline-item liquid-panel">
-          <div class="dot"></div>
-          <h3>{{ item.role }}</h3>
-          <span>{{ item.time }}</span>
-          <p>{{ item.desc }}</p>
+        <article
+          v-for="item in experiences"
+          :key="item.id"
+          :class="['timeline-item', 'liquid-panel', { expanded: activeExperience === item.id }]"
+        >
+          <button class="timeline-summary" @click="toggleExperience(item.id)">
+            <div class="dot"></div>
+            <div class="summary-main">
+              <h3>{{ item.role }}</h3>
+              <span>{{ item.time }}</span>
+              <p>{{ item.summary }}</p>
+            </div>
+            <span class="toggle-text">{{ activeExperience === item.id ? '收起' : '查看详情' }}</span>
+          </button>
+
+          <transition name="expand">
+            <div v-if="activeExperience === item.id" class="timeline-detail">
+              <ul>
+                <li v-for="point in item.details" :key="point">{{ point }}</li>
+              </ul>
+            </div>
+          </transition>
         </article>
       </div>
     </section>
@@ -277,6 +362,17 @@ onBeforeUnmount(() => {
           <ul>
             <li v-for="point in item.bullets" :key="point">{{ point }}</li>
           </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="hobbies" class="section reveal">
+      <h2>个人爱好</h2>
+      <div class="hobby-grid">
+        <article v-for="item in hobbies" :key="item.title" class="hobby-card liquid-panel">
+          <p class="hobby-subtitle">{{ item.subtitle }}</p>
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.text }}</p>
         </article>
       </div>
     </section>
