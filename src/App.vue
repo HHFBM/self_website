@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import defaultProfilePhoto from './assets/profile-default.jpg'
 
 const ROWS = 20
 const COLS = 10
@@ -179,7 +180,7 @@ const hobbies = [
     id: 'tetris',
     title: '俄罗斯方块',
     subtitle: 'Tetris Easter Egg',
-    text: '点击这里启动小游戏：方向键控制移动，空格加速下落，R 键旋转。',
+    text: '点击这里启动小游戏：方向键控制移动，R 切换旋转方向，P 暂停/继续。',
     interactive: true,
   },
 ]
@@ -203,8 +204,12 @@ const activeExperience = ref(experiences[0].id)
 const statValues = ref(stats.map(() => 0))
 const heroCard = ref(null)
 const uploadInput = ref(null)
+const photoInput = ref(null)
 const customBackgroundUrl = ref('')
 const customBackgroundName = ref('')
+const showPhotoModal = ref(false)
+const profilePhotoUrl = ref(defaultProfilePhoto)
+const profilePhotoName = ref('默认照片')
 
 const showTetris = ref(false)
 const board = ref(createEmptyBoard())
@@ -224,6 +229,7 @@ let animationFrameId = null
 let lastFrameTime = 0
 let dropAccumulator = 0
 let customBackgroundObjectUrl = ''
+let profilePhotoObjectUrl = ''
 
 const level = computed(() => Math.floor(linesCleared.value / 10) + 1)
 
@@ -580,8 +586,21 @@ function onGameKeydown(e) {
   if (!showTetris.value) return
 
   const key = e.key
-  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'r', 'R'].includes(key)) {
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'r', 'R', 'p', 'P'].includes(key)) {
     e.preventDefault()
+  }
+
+  if (key === 'p' || key === 'P') {
+    if (isGameOver.value) return
+    if (isGameRunning.value) {
+      isGameRunning.value = false
+      fastDrop.value = false
+      stopGameLoop()
+    } else {
+      isGameRunning.value = true
+      startGameLoop()
+    }
+    return
   }
 
   if (!isGameRunning.value || isGameOver.value) {
@@ -598,12 +617,12 @@ function onGameKeydown(e) {
   } else if (key === 'ArrowDown') {
     fastDrop.value = true
   } else if (key === 'ArrowUp') {
+    rotateCurrentPiece(rotationDirection.value === 'clockwise')
+  } else if (key === 'r' || key === 'R') {
     rotationDirection.value =
       rotationDirection.value === 'clockwise' ? 'counterclockwise' : 'clockwise'
   } else if (key === ' ') {
     hardDrop()
-  } else if (key === 'r' || key === 'R') {
-    rotateCurrentPiece(rotationDirection.value === 'clockwise')
   }
 }
 
@@ -621,6 +640,39 @@ function getCellStyle(cellValue) {
   return {
     background: `linear-gradient(145deg, ${PIECE_COLORS[cellValue]}, rgba(255,255,255,0.88))`,
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7), 0 2px 10px rgba(0,0,0,0.18)',
+  }
+}
+
+function openPhotoModal() {
+  showPhotoModal.value = true
+}
+
+function closePhotoModal() {
+  showPhotoModal.value = false
+}
+
+function onProfilePhotoUpload(event) {
+  const file = event.target.files?.[0]
+  if (!file || !file.type.startsWith('image/')) return
+
+  if (profilePhotoObjectUrl) {
+    URL.revokeObjectURL(profilePhotoObjectUrl)
+  }
+
+  profilePhotoObjectUrl = URL.createObjectURL(file)
+  profilePhotoUrl.value = profilePhotoObjectUrl
+  profilePhotoName.value = file.name
+}
+
+function resetProfilePhoto() {
+  if (profilePhotoObjectUrl) {
+    URL.revokeObjectURL(profilePhotoObjectUrl)
+    profilePhotoObjectUrl = ''
+  }
+  profilePhotoUrl.value = defaultProfilePhoto
+  profilePhotoName.value = '默认照片'
+  if (photoInput.value) {
+    photoInput.value.value = ''
   }
 }
 
@@ -846,7 +898,7 @@ onBeforeUnmount(() => {
         <div class="tetris-head">
           <div>
             <h3>Tetris 彩蛋已启动</h3>
-            <p>方向键控制移动：上键切换旋转方向、下键按住加速、空格直接落下，R 按当前方向旋转。</p>
+            <p>方向键控制移动：上键旋转、下键按住加速、空格直接落下，R 切换旋转方向，P 暂停/继续。</p>
           </div>
           <div class="tetris-actions">
             <button class="tiny-btn" @click="restartTetrisGame">重新开始</button>
@@ -879,14 +931,19 @@ onBeforeUnmount(() => {
             </div>
             <div class="liquid-subpanel control-note">
               <p>← →：左右移动</p>
-              <p>↑：切换旋转方向</p>
+              <p>↑：按当前方向旋转</p>
               <p>↓：按住加速下落</p>
               <p>Space：直接落下</p>
-              <p>R：按当前方向旋转</p>
+              <p>R：切换旋转方向</p>
+              <p>P：暂停 / 继续</p>
             </div>
             <div class="tetris-stat liquid-subpanel">
               <span>旋转方向</span>
               <strong>{{ rotationDirection === 'clockwise' ? '顺时针' : '逆时针' }}</strong>
+            </div>
+            <div v-if="!isGameRunning && !isGameOver" class="game-paused liquid-subpanel">
+              <p>已暂停</p>
+              <small>按 P 继续游戏</small>
             </div>
             <div v-if="isGameOver" class="game-over liquid-subpanel">
               <p>Game Over</p>

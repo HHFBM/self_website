@@ -565,6 +565,16 @@ h2 {
   color: #5e6170;
 }
 
+.game-paused p {
+  margin: 0;
+  color: #1f5f93;
+  font-weight: 800;
+}
+
+.game-paused small {
+  color: #5e6170;
+}
+
 .skill-wrap {
   margin-bottom: 0.8rem;
 }
