@@ -73,9 +73,27 @@ const navItems = [
 ]
 
 const stats = [
-  { label: '生成结构合规率', target: 95, suffix: '%+' },
-  { label: 'RAG 准确率提升', target: 25, suffix: '%' },
-  { label: '链路效率提升', target: 30, suffix: '%' },
+  {
+    badge: '质量稳定性',
+    label: '文档结构化合规率',
+    target: 95,
+    suffix: '%+',
+    note: '引入 LLM-as-Judge + 自动重写闭环，输出格式稳定可解析',
+  },
+  {
+    badge: '效果提升',
+    label: '复杂问答 Top-1 准确率提升',
+    target: 25,
+    suffix: '%',
+    note: '融合 BM25 + 向量检索 + 多轮评估，相对 baseline 持续提升',
+  },
+  {
+    badge: '工程效率',
+    label: '端到端链路提速',
+    target: 30,
+    suffix: '%',
+    note: '优化检索、推理与服务并发后，平均处理时延下降约 30%',
+  },
 ]
 
 const projects = [
@@ -104,11 +122,13 @@ const experiences = [
     id: 'exp-1',
     role: '算法实习生 · 西安朝野未来科技',
     time: '2025.12 - 2026.06',
-    summary: 'AI Agent 与 Deep Research 模块研发，构建 RAG + 推理闭环。',
+    summary: '负责 Deep Research Agent 核心链路设计与落地，从召回、生成到评测重写形成可持续迭代的工程闭环。',
     details: [
-      '搭建 Query → Retrieval → Generation 流程，融合 BM25 与向量检索。',
-      '设计“语义拆分 → 检索 → 生成 → 评估 → 重写”的推理闭环。',
-      '引入 LLM-as-Judge 自动评测机制，提升结构合规与答案稳定性。',
+      '搭建 Query → Retrieval → Generation 管线，融合 BM25 + 向量检索，显著提升长尾问题召回质量。',
+      '设计“语义拆分 → 检索 → 生成 → 评估 → 重写”多阶段流程，增强复杂问题可解释推理能力。',
+      '引入 LLM-as-Judge 自动评测与候选排序机制，文档结构化合规率稳定在 95%+。',
+      '参与本地模型服务化部署（vLLM + Qwen 7B/14B），优化并发调度、KV Cache 与推理时延。',
+      '沉淀可复用 Prompt 模板、评测脚本与回归流程，支持版本快速迭代与效果对比。',
     ],
   },
   {
@@ -123,17 +143,6 @@ const experiences = [
     ],
   },
   {
-    id: 'exp-4',
-    role: '产品开发实习生 · 神州数码信息服务',
-    time: '2022.06 - 2022.08',
-    summary: '参与金融微服务系统开发，接触分布式架构与事务一致性方案。',
-    details: [
-      '基于 Dubbo / Spring Cloud 参与业务模块与接口开发。',
-      '学习服务注册发现、负载均衡与 Redis 缓存优化策略。',
-      '理解 TCC / SAGA / XA 等分布式事务机制在业务中的取舍。',
-    ],
-  },
-  {
     id: 'exp-3',
     role: 'BSc · University of Liverpool',
     time: '2021 - 2024',
@@ -142,6 +151,18 @@ const experiences = [
       '聚焦计算机视觉、强化学习、多智能体系统与大数据分析。',
       '毕业研究：基于 YOLOv5 与 Transformer 的目标检测性能提升。',
       '形成从建模、训练到实验评估的完整研究流程。',
+    ],
+  },
+  {
+    id: 'exp-4',
+    role: '产品开发实习生 · 神州数码信息服务',
+    time: '2022.06 - 2022.08',
+    summary: '参与银行核心业务平台开发与性能调优，系统化理解微服务治理与分布式事务实践。',
+    details: [
+      '基于 Dubbo / Spring Cloud 参与业务模块与接口开发，支持线上银行管理平台多项需求迭代。',
+      '在分布式链路中实践服务注册发现、熔断降级、负载均衡与 Redis 缓存优化策略。',
+      '参与 TCC / SAGA / XA 等分布式事务方案调试，理解金融场景一致性与可用性取舍。',
+      '配合数据库与接口性能优化，降低热点查询压力并提升核心链路响应效率。',
     ],
   },
   {
@@ -877,7 +898,7 @@ onBeforeUnmount(() => {
           </p>
           <div class="cta-row">
             <a class="btn primary" href="#projects" @click.prevent="scrollToId('projects')">查看项目</a>
-            <a class="btn ghost" href="mailto:894480363@qq.com">联系我</a>
+            <a class="btn ghost" href="mailto:jiajun894480363@163.com">联系我</a>
           </div>
         </article>
 
@@ -905,36 +926,74 @@ onBeforeUnmount(() => {
 
       <ul class="stats reveal">
         <li v-for="(item, idx) in stats" :key="item.label" class="liquid-panel">
+          <span class="stat-badge">{{ item.badge }}</span>
           <h3>{{ statValues[idx] }}{{ item.suffix }}</h3>
           <p>{{ item.label }}</p>
+          <small>{{ item.note }}</small>
         </li>
       </ul>
     </section>
 
     <section id="about" class="section reveal">
       <h2>关于我</h2>
+      <p class="about-intro">
+        我是偏研究驱动的算法工程师，习惯从问题建模出发，再把模型、数据与工程链路串成可上线、可评估、可迭代的系统。
+        当前重点关注 LLM Agent、RAG、多阶段推理与模型服务化部署，希望在真实业务场景里持续做“效果与工程同时可交付”的 AI 应用。
+      </p>
       <div class="about-grid">
         <article class="liquid-panel">
-          <h3>教育背景</h3>
-          <p>
-            UCL MSc Scientific Data Intensive Computing（Merit, 2025）<br />
-            University of Liverpool BSc Computer Science（First Class Honour, Top 10%, 2024）<br />
-            西安市铁一中学（2017 - 2020）
-          </p>
+          <h3>个人定位</h3>
+          <ul class="about-list">
+            <li>研究导向的算法工程师，擅长复杂问题拆解与多阶段推理设计</li>
+            <li>关注“能上线、可评估、可扩展”的系统化实现，而非单点模型效果</li>
+            <li>对 AI Agent 与 LLM 应用落地保持长期投入，偏好高反馈迭代节奏</li>
+          </ul>
         </article>
         <article class="liquid-panel">
-          <h3>研究兴趣</h3>
-          <p>蛋白质结构预测、RAG 推理链路、LLM 自动评估、目标检测模型优化。</p>
+          <h3>教育与研究背景</h3>
+          <ul class="about-list">
+            <li>UCL · MSc Scientific Data Intensive Computing（Merit, 2025）</li>
+            <li>University of Liverpool · BSc Computer Science（First Class, Top 10%, 2024）</li>
+            <li>西安市铁一中学（2017 - 2020）</li>
+          </ul>
         </article>
         <article class="liquid-panel">
-          <h3>工程优势</h3>
-          <p>兼顾算法与工程，可在有限算力环境下完成模型部署、调优与产品化交付。</p>
+          <h3>技术专长</h3>
+          <ul class="about-list">
+            <li>RAG Pipeline 设计与优化（召回、排序、上下文构建）</li>
+            <li>LLM 推理链与评测闭环（ReAct / CoT / ToT / LLM-as-Judge）</li>
+            <li>多模型训练与部署（PyTorch、vLLM、有限算力推理优化）</li>
+          </ul>
+        </article>
+        <article class="liquid-panel">
+          <h3>我可以解决的问题</h3>
+          <ul class="about-list">
+            <li>把“概念验证”升级为可交付的 Agent / RAG 系统</li>
+            <li>针对复杂业务问题构建稳定推理链路与质量评估机制</li>
+            <li>在成本与性能约束下提升模型可用性与响应效率</li>
+          </ul>
+        </article>
+        <article class="liquid-panel">
+          <h3>当前状态</h3>
+          <ul class="about-list">
+            <li>重点投入方向：企业知识库问答、文档理解与结构化生成</li>
+            <li>期待角色：算法工程师 / LLM 应用工程师 / AI Agent 工程方向</li>
+            <li>擅长在需求变化快的项目里，快速搭建 MVP 并迭代成稳定版本</li>
+          </ul>
+        </article>
+        <article class="liquid-panel">
+          <h3>协作方式</h3>
+          <ul class="about-list">
+            <li>先明确目标与评估指标，再决定技术方案与资源分配</li>
+            <li>重视版本对比与实验记录，保证每次迭代都有可验证收益</li>
+            <li>偏好与产品、后端、算法并行协作，缩短从想法到上线的路径</li>
+          </ul>
         </article>
       </div>
     </section>
 
     <section id="experience" class="section reveal">
-      <h2>个人经历时间线</h2>
+      <h2>个人经历</h2>
       <div class="timeline">
         <article
           v-for="item in experiences"
