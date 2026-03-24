@@ -1,5 +1,65 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+
+const ROWS = 20
+const COLS = 10
+
+const TETROMINOS = [
+  { shape: [[1, 1, 1, 1]], color: 1 },
+  {
+    shape: [
+      [1, 0, 0],
+      [1, 1, 1],
+    ],
+    color: 2,
+  },
+  {
+    shape: [
+      [0, 0, 1],
+      [1, 1, 1],
+    ],
+    color: 3,
+  },
+  {
+    shape: [
+      [1, 1],
+      [1, 1],
+    ],
+    color: 4,
+  },
+  {
+    shape: [
+      [0, 1, 1],
+      [1, 1, 0],
+    ],
+    color: 5,
+  },
+  {
+    shape: [
+      [0, 1, 0],
+      [1, 1, 1],
+    ],
+    color: 6,
+  },
+  {
+    shape: [
+      [1, 1, 0],
+      [0, 1, 1],
+    ],
+    color: 7,
+  },
+]
+
+const PIECE_COLORS = [
+  'rgba(0,0,0,0)',
+  '#55d4ff',
+  '#ffd166',
+  '#ff8d6f',
+  '#7cf29a',
+  '#b78dff',
+  '#70a4ff',
+  '#ff6b97',
+]
 
 const navItems = [
   { id: 'hero', label: '首页' },
@@ -72,6 +132,17 @@ const experiences = [
     ],
   },
   {
+    id: 'exp-3b',
+    role: '西安市铁一中学',
+    time: '2017 - 2020',
+    summary: '完成高中阶段学习，夯实数理与英语基础。',
+    details: [
+      '建立系统化学习习惯与长期目标管理能力。',
+      '在理科与英语学习中形成较好的逻辑分析与表达能力。',
+      '为后续计算机与数据科学方向学习打下基础。',
+    ],
+  },
+  {
     id: 'exp-4',
     role: '产品开发实习生 · 神州数码信息服务',
     time: '2022.06 - 2022.08',
@@ -86,19 +157,29 @@ const experiences = [
 
 const hobbies = [
   {
+    id: 'football',
     title: '足球',
     subtitle: 'Football',
     text: '关注比赛战术与团队协作，平时也会和朋友约球，保持节奏与专注力。',
   },
   {
+    id: 'gaming',
     title: '游戏',
     subtitle: 'Gaming',
     text: '偏好策略和竞技类游戏，喜欢从机制拆解和复盘中提升决策能力。',
   },
   {
+    id: 'fitness',
     title: '健身',
     subtitle: 'Fitness',
     text: '长期保持力量和有氧训练，稳定体能与执行力，提升长期工作状态。',
+  },
+  {
+    id: 'tetris',
+    title: '俄罗斯方块',
+    subtitle: 'Tetris Easter Egg',
+    text: '点击这里启动小游戏：方向键控制移动，空格加速下落，R 键旋转。',
+    interactive: true,
   },
 ]
 
@@ -121,10 +202,51 @@ const activeExperience = ref(experiences[0].id)
 const statValues = ref(stats.map(() => 0))
 const heroCard = ref(null)
 
+const showTetris = ref(false)
+const board = ref(createEmptyBoard())
+const currentPiece = ref(null)
+const nextPiece = ref(createRandomPiece())
+const isGameRunning = ref(false)
+const isGameOver = ref(false)
+const fastDrop = ref(false)
+const score = ref(0)
+const linesCleared = ref(0)
+
+let cleanupHeroTilt = null
+let revealObserver = null
+let statsObserver = null
+let animationFrameId = null
+let lastFrameTime = 0
+let dropAccumulator = 0
+
+const level = computed(() => Math.floor(linesCleared.value / 10) + 1)
+
 const filteredProjects = computed(() => {
   if (filter.value === 'all') return projects
   return projects.filter(p => p.tag.includes(filter.value))
 })
+
+const displayBoard = computed(() => {
+  const overlay = board.value.map(row => row.slice())
+  const piece = currentPiece.value
+
+  if (!piece) return overlay
+
+  for (let r = 0; r < piece.matrix.length; r += 1) {
+    for (let c = 0; c < piece.matrix[r].length; c += 1) {
+      if (!piece.matrix[r][c]) continue
+      const y = piece.y + r
+      const x = piece.x + c
+      if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+        overlay[y][x] = piece.color
+      }
+    }
+  }
+
+  return overlay
+})
+
+const boardCells = computed(() => displayBoard.value.flat())
 
 const setPointerGlow = e => {
   const x = (e.clientX / window.innerWidth) * 100
@@ -166,7 +288,7 @@ const animateStats = () => {
 
 const bindHeroTilt = () => {
   const el = heroCard.value
-  if (!el) return
+  if (!el) return null
 
   const onMove = e => {
     const box = el.getBoundingClientRect()
@@ -194,13 +316,285 @@ const toggleExperience = id => {
   activeExperience.value = activeExperience.value === id ? '' : id
 }
 
-let cleanupHeroTilt = null
-let revealObserver = null
-let statsObserver = null
+function createEmptyBoard() {
+  return Array.from({ length: ROWS }, () => Array(COLS).fill(0))
+}
+
+function cloneMatrix(matrix) {
+  return matrix.map(row => [...row])
+}
+
+function createRandomPiece() {
+  const proto = TETROMINOS[Math.floor(Math.random() * TETROMINOS.length)]
+  const matrix = cloneMatrix(proto.shape)
+  return {
+    matrix,
+    color: proto.color,
+    x: Math.floor((COLS - matrix[0].length) / 2),
+    y: -1,
+  }
+}
+
+function hasCollision(testBoard, matrix, x, y) {
+  for (let r = 0; r < matrix.length; r += 1) {
+    for (let c = 0; c < matrix[r].length; c += 1) {
+      if (!matrix[r][c]) continue
+      const nx = x + c
+      const ny = y + r
+
+      if (nx < 0 || nx >= COLS || ny >= ROWS) return true
+      if (ny >= 0 && testBoard[ny][nx] !== 0) return true
+    }
+  }
+  return false
+}
+
+function spawnPiece() {
+  const piece = nextPiece.value
+  piece.x = Math.floor((COLS - piece.matrix[0].length) / 2)
+  piece.y = -1
+  currentPiece.value = piece
+  nextPiece.value = createRandomPiece()
+
+  if (hasCollision(board.value, piece.matrix, piece.x, piece.y)) {
+    isGameOver.value = true
+    isGameRunning.value = false
+    stopGameLoop()
+  }
+}
+
+function mergeCurrentPiece() {
+  const piece = currentPiece.value
+  if (!piece) return
+
+  const merged = board.value.map(row => row.slice())
+
+  for (let r = 0; r < piece.matrix.length; r += 1) {
+    for (let c = 0; c < piece.matrix[r].length; c += 1) {
+      if (!piece.matrix[r][c]) continue
+      const y = piece.y + r
+      const x = piece.x + c
+      if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+        merged[y][x] = piece.color
+      }
+    }
+  }
+
+  board.value = merged
+}
+
+function clearCompletedLines() {
+  const keptRows = board.value.filter(row => row.some(cell => cell === 0))
+  const cleared = ROWS - keptRows.length
+
+  if (!cleared) return
+
+  const newRows = Array.from({ length: cleared }, () => Array(COLS).fill(0))
+  board.value = [...newRows, ...keptRows]
+  linesCleared.value += cleared
+
+  const reward = [0, 100, 300, 500, 800]
+  score.value += reward[cleared] * level.value
+}
+
+function lockPieceAndContinue() {
+  mergeCurrentPiece()
+  clearCompletedLines()
+  spawnPiece()
+}
+
+function tryMove(dx, dy) {
+  const piece = currentPiece.value
+  if (!piece || isGameOver.value) return false
+
+  const nextX = piece.x + dx
+  const nextY = piece.y + dy
+
+  if (!hasCollision(board.value, piece.matrix, nextX, nextY)) {
+    currentPiece.value = { ...piece, x: nextX, y: nextY }
+    return true
+  }
+
+  if (dy === 1) {
+    lockPieceAndContinue()
+  }
+
+  return false
+}
+
+function rotateMatrixClockwise(matrix) {
+  const rows = matrix.length
+  const cols = matrix[0].length
+  const rotated = Array.from({ length: cols }, () => Array(rows).fill(0))
+
+  for (let r = 0; r < rows; r += 1) {
+    for (let c = 0; c < cols; c += 1) {
+      rotated[c][rows - 1 - r] = matrix[r][c]
+    }
+  }
+
+  return rotated
+}
+
+function rotateCurrentPiece() {
+  const piece = currentPiece.value
+  if (!piece || isGameOver.value) return
+
+  const rotated = rotateMatrixClockwise(piece.matrix)
+  const kicks = [0, -1, 1, -2, 2]
+
+  for (const offset of kicks) {
+    const testX = piece.x + offset
+    if (!hasCollision(board.value, rotated, testX, piece.y)) {
+      currentPiece.value = { ...piece, matrix: rotated, x: testX }
+      return
+    }
+  }
+}
+
+function hardDrop() {
+  const piece = currentPiece.value
+  if (!piece || isGameOver.value) return
+
+  let y = piece.y
+  while (!hasCollision(board.value, piece.matrix, piece.x, y + 1)) {
+    y += 1
+  }
+
+  currentPiece.value = { ...piece, y }
+  lockPieceAndContinue()
+}
+
+function gameTick() {
+  if (!isGameRunning.value || isGameOver.value) return
+  tryMove(0, 1)
+}
+
+function runGameLoop(timestamp) {
+  if (!isGameRunning.value) return
+
+  if (!lastFrameTime) {
+    lastFrameTime = timestamp
+  }
+
+  const delta = timestamp - lastFrameTime
+  lastFrameTime = timestamp
+  dropAccumulator += delta
+
+  const baseInterval = Math.max(110, 520 - (level.value - 1) * 34)
+  const dropInterval = fastDrop.value ? 50 : baseInterval
+
+  if (dropAccumulator >= dropInterval) {
+    gameTick()
+    dropAccumulator = 0
+  }
+
+  animationFrameId = requestAnimationFrame(runGameLoop)
+}
+
+function stopGameLoop() {
+  if (animationFrameId !== null) {
+    cancelAnimationFrame(animationFrameId)
+    animationFrameId = null
+  }
+}
+
+function startGameLoop() {
+  stopGameLoop()
+  lastFrameTime = 0
+  dropAccumulator = 0
+  animationFrameId = requestAnimationFrame(runGameLoop)
+}
+
+function restartTetrisGame() {
+  board.value = createEmptyBoard()
+  currentPiece.value = null
+  nextPiece.value = createRandomPiece()
+  score.value = 0
+  linesCleared.value = 0
+  isGameOver.value = false
+  isGameRunning.value = true
+  fastDrop.value = false
+  spawnPiece()
+  startGameLoop()
+}
+
+function openTetris() {
+  showTetris.value = true
+  restartTetrisGame()
+  nextTick(() => {
+    document.getElementById('tetris-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  })
+}
+
+function closeTetris() {
+  showTetris.value = false
+  isGameRunning.value = false
+  fastDrop.value = false
+  stopGameLoop()
+}
+
+function onHobbyClick(item) {
+  if (item.id !== 'tetris') return
+  if (!showTetris.value) {
+    openTetris()
+    return
+  }
+  document.getElementById('tetris-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+function onGameKeydown(e) {
+  if (!showTetris.value) return
+
+  const key = e.key
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'r', 'R'].includes(key)) {
+    e.preventDefault()
+  }
+
+  if (!isGameRunning.value || isGameOver.value) {
+    if (key === 'Enter') {
+      restartTetrisGame()
+    }
+    return
+  }
+
+  if (key === 'ArrowLeft') {
+    tryMove(-1, 0)
+  } else if (key === 'ArrowRight') {
+    tryMove(1, 0)
+  } else if (key === 'ArrowDown') {
+    tryMove(0, 1)
+  } else if (key === 'ArrowUp') {
+    hardDrop()
+  } else if (key === ' ') {
+    fastDrop.value = true
+  } else if (key === 'r' || key === 'R') {
+    rotateCurrentPiece()
+  }
+}
+
+function onGameKeyup(e) {
+  if (e.key === ' ') {
+    fastDrop.value = false
+  }
+}
+
+function getCellStyle(cellValue) {
+  if (!cellValue) {
+    return { background: 'rgba(255, 255, 255, 0.08)' }
+  }
+
+  return {
+    background: `linear-gradient(145deg, ${PIECE_COLORS[cellValue]}, rgba(255,255,255,0.88))`,
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7), 0 2px 10px rgba(0,0,0,0.18)',
+  }
+}
 
 onMounted(() => {
   window.addEventListener('pointermove', setPointerGlow, { passive: true })
   window.addEventListener('scroll', markActiveSection, { passive: true })
+  window.addEventListener('keydown', onGameKeydown)
+  window.addEventListener('keyup', onGameKeyup)
   markActiveSection()
 
   cleanupHeroTilt = bindHeroTilt()
@@ -238,9 +632,12 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('pointermove', setPointerGlow)
   window.removeEventListener('scroll', markActiveSection)
+  window.removeEventListener('keydown', onGameKeydown)
+  window.removeEventListener('keyup', onGameKeyup)
   cleanupHeroTilt?.()
   revealObserver?.disconnect()
   statsObserver?.disconnect()
+  stopGameLoop()
 })
 </script>
 
@@ -301,7 +698,8 @@ onBeforeUnmount(() => {
           <h3>教育背景</h3>
           <p>
             UCL MSc Scientific Data Intensive Computing（Merit, 2025）<br />
-            University of Liverpool BSc Computer Science（First Class Honour, Top 10%, 2024）
+            University of Liverpool BSc Computer Science（First Class Honour, Top 10%, 2024）<br />
+            西安市铁一中学（2017 - 2020）
           </p>
         </article>
         <article class="liquid-panel">
@@ -369,12 +767,67 @@ onBeforeUnmount(() => {
     <section id="hobbies" class="section reveal">
       <h2>个人爱好</h2>
       <div class="hobby-grid">
-        <article v-for="item in hobbies" :key="item.title" class="hobby-card liquid-panel">
+        <article
+          v-for="item in hobbies"
+          :key="item.id"
+          :class="['hobby-card', 'liquid-panel', { clickable: item.interactive }]"
+          @click="onHobbyClick(item)"
+        >
           <p class="hobby-subtitle">{{ item.subtitle }}</p>
           <h3>{{ item.title }}</h3>
           <p>{{ item.text }}</p>
         </article>
       </div>
+
+      <article v-if="showTetris" id="tetris-panel" class="tetris-panel liquid-panel">
+        <div class="tetris-head">
+          <div>
+            <h3>Tetris 彩蛋已启动</h3>
+            <p>方向键控制移动，空格按住加速下落，R 旋转方块。上方向键为快速到底。</p>
+          </div>
+          <div class="tetris-actions">
+            <button class="tiny-btn" @click="restartTetrisGame">重新开始</button>
+            <button class="tiny-btn" @click="closeTetris">收起彩蛋</button>
+          </div>
+        </div>
+
+        <div class="tetris-wrap">
+          <div class="tetris-board" role="application" aria-label="Tetris game board">
+            <div
+              v-for="(cell, index) in boardCells"
+              :key="index"
+              class="tetris-cell"
+              :style="getCellStyle(cell)"
+            ></div>
+          </div>
+
+          <aside class="tetris-side">
+            <div class="tetris-stat liquid-subpanel">
+              <span>分数</span>
+              <strong>{{ score }}</strong>
+            </div>
+            <div class="tetris-stat liquid-subpanel">
+              <span>消行</span>
+              <strong>{{ linesCleared }}</strong>
+            </div>
+            <div class="tetris-stat liquid-subpanel">
+              <span>等级</span>
+              <strong>{{ level }}</strong>
+            </div>
+            <div class="liquid-subpanel control-note">
+              <p>← →：左右移动</p>
+              <p>↓：下移一格</p>
+              <p>↑：快速到底</p>
+              <p>Space：加速下落</p>
+              <p>R：旋转方块</p>
+            </div>
+            <div v-if="isGameOver" class="game-over liquid-subpanel">
+              <p>Game Over</p>
+              <small>按“重新开始”或 Enter 再来一局</small>
+            </div>
+          </aside>
+        </div>
+      </article>
     </section>
 
     <section id="contact" class="section reveal">

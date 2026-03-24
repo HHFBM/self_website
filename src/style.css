@@ -235,6 +235,10 @@ h2 {
   gap: 0.85rem;
 }
 
+.hobby-grid {
+  align-items: stretch;
+}
+
 .about-grid article,
 .project-card,
 .skill-wrap,
@@ -360,7 +364,7 @@ h2 {
 
 .project-card,
 .hobby-card {
-  transition: transform 0.25s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 .project-card:hover,
@@ -385,6 +389,131 @@ h2 {
 
 .hobby-card h3 {
   margin: 0.3rem 0 0.5rem;
+}
+
+.hobby-card.clickable {
+  cursor: pointer;
+  border-color: rgba(118, 195, 255, 0.85);
+  box-shadow:
+    0 16px 38px rgba(79, 145, 186, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.hobby-card.clickable:hover {
+  transform: translateY(-4px) scale(1.01);
+}
+
+.tetris-panel {
+  margin-top: 1rem;
+  padding: 1rem;
+}
+
+.tetris-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.tetris-head h3 {
+  margin: 0;
+}
+
+.tetris-head p {
+  margin: 0.3rem 0 0;
+  color: var(--muted);
+}
+
+.tetris-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tiny-btn {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.48);
+  color: #1a4468;
+  font-weight: 700;
+  padding: 0.44rem 0.85rem;
+  cursor: pointer;
+}
+
+.tiny-btn:hover {
+  background: rgba(190, 230, 255, 0.64);
+}
+
+.tetris-wrap {
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: auto 220px;
+  gap: 0.8rem;
+}
+
+.tetris-board {
+  display: grid;
+  grid-template-columns: repeat(10, 24px);
+  grid-template-rows: repeat(20, 24px);
+  gap: 2px;
+  padding: 0.65rem;
+  background: rgba(8, 23, 35, 0.25);
+  border-radius: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  width: fit-content;
+}
+
+.tetris-cell {
+  width: 24px;
+  height: 24px;
+  border-radius: 0.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.tetris-side {
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+}
+
+.liquid-subpanel {
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.4);
+  padding: 0.7rem;
+}
+
+.tetris-stat {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.tetris-stat span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.tetris-stat strong {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.4rem;
+  color: #1a4468;
+}
+
+.control-note p {
+  margin: 0.15rem 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.game-over p {
+  margin: 0;
+  color: #b22052;
+  font-weight: 800;
+}
+
+.game-over small {
+  color: #5e6170;
 }
 
 .skill-wrap {
@@ -491,6 +620,21 @@ h2 {
   .project-grid,
   .hobby-grid {
     grid-template-columns: 1fr;
+  }
+
+  .tetris-wrap {
+    grid-template-columns: 1fr;
+  }
+
+  .tetris-board {
+    margin-inline: auto;
+    grid-template-columns: repeat(10, 20px);
+    grid-template-rows: repeat(20, 20px);
+  }
+
+  .tetris-cell {
+    width: 20px;
+    height: 20px;
   }
 
   .photo-slot {
