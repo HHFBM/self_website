@@ -277,6 +277,7 @@ const lunchHistory = ref([])
 const lunchSource = ref('local')
 const lunchStatus = ref('当前使用本地候选列表，后续可接数据库/API。')
 const isLoadingLunchOptions = ref(false)
+const lunchDraft = ref('')
 
 let cleanupHeroTilt = null
 let revealObserver = null
@@ -288,6 +289,8 @@ let customBackgroundObjectUrl = ''
 let profilePhotoObjectUrl = ''
 const PHOTO_LOCK_ENABLED_KEY = 'self_website_photo_lock_enabled'
 const PHOTO_LOCK_DATA_KEY = 'self_website_photo_lock_data'
+const LUNCH_OPTIONS_STORAGE_KEY = 'self_website_lunch_options'
+const LUNCH_HISTORY_STORAGE_KEY = 'self_website_lunch_history'
 
 const level = computed(() => Math.floor(linesCleared.value / 10) + 1)
 
@@ -648,6 +651,43 @@ function normalizeLunchOptions(rawOptions) {
     .filter(Boolean)
 }
 
+function persistLunchOptions() {
+  try {
+    localStorage.setItem(LUNCH_OPTIONS_STORAGE_KEY, JSON.stringify(lunchOptions.value))
+  } catch {
+    // Ignore storage write errors.
+  }
+}
+
+function persistLunchHistory() {
+  try {
+    localStorage.setItem(LUNCH_HISTORY_STORAGE_KEY, JSON.stringify(lunchHistory.value))
+  } catch {
+    // Ignore storage write errors.
+  }
+}
+
+function restoreLunchState() {
+  try {
+    const rawOptions = localStorage.getItem(LUNCH_OPTIONS_STORAGE_KEY)
+    const parsedOptions = rawOptions ? JSON.parse(rawOptions) : []
+    const normalized = normalizeLunchOptions(parsedOptions)
+    if (normalized.length) {
+      lunchOptions.value = normalized
+      lunchSource.value = 'local'
+      lunchStatus.value = '已加载你本地保存的候选列表。'
+    }
+
+    const rawHistory = localStorage.getItem(LUNCH_HISTORY_STORAGE_KEY)
+    const parsedHistory = rawHistory ? JSON.parse(rawHistory) : []
+    if (Array.isArray(parsedHistory)) {
+      lunchHistory.value = parsedHistory.filter(item => typeof item === 'string').slice(0, 6)
+    }
+  } catch {
+    // Ignore storage parse/read errors.
+  }
+}
+
 function pickLunch() {
   if (!lunchOptions.value.length) {
     lunchResult.value = '候选列表为空，请先刷新候选列表'
@@ -663,12 +703,43 @@ function pickLunch() {
     hour12: false,
   })
   lunchHistory.value = [`${pickedAt} · ${selected}`, ...lunchHistory.value].slice(0, 6)
+  persistLunchHistory()
+}
+
+function addLunchOption() {
+  const value = lunchDraft.value.trim()
+  if (!value) return
+
+  if (lunchOptions.value.some(item => item === value)) {
+    lunchStatus.value = '该候选项已存在，无需重复添加。'
+    lunchDraft.value = ''
+    return
+  }
+
+  lunchOptions.value = [value, ...lunchOptions.value]
+  lunchDraft.value = ''
+  lunchSource.value = 'local'
+  lunchStatus.value = `已添加候选项：${value}`
+  persistLunchOptions()
+}
+
+function removeLunchOption(index) {
+  if (index < 0 || index >= lunchOptions.value.length) return
+  const removed = lunchOptions.value[index]
+  lunchOptions.value = lunchOptions.value.filter((_, idx) => idx !== index)
+  lunchSource.value = 'local'
+  lunchStatus.value = `已移除候选项：${removed}`
+  persistLunchOptions()
+  if (!lunchOptions.value.length) {
+    lunchResult.value = '候选列表为空，请先添加候选项'
+  }
 }
 
 function useLocalLunchOptions() {
   lunchOptions.value = [...DEFAULT_LUNCH_OPTIONS]
   lunchSource.value = 'local'
   lunchStatus.value = '已切回本地候选列表。'
+  persistLunchOptions()
 }
 
 async function loadLunchOptionsFromApi() {
@@ -689,10 +760,12 @@ async function loadLunchOptionsFromApi() {
     lunchOptions.value = normalized
     lunchSource.value = 'api'
     lunchStatus.value = `已从数据库/API加载 ${normalized.length} 个候选项。`
+    persistLunchOptions()
   } catch {
     lunchSource.value = 'local'
     lunchStatus.value = '数据库/API暂不可用，继续使用本地候选列表。'
     lunchOptions.value = [...DEFAULT_LUNCH_OPTIONS]
+    persistLunchOptions()
   } finally {
     isLoadingLunchOptions.value = false
   }
@@ -902,6 +975,7 @@ function clearLocalBackground() {
 
 onMounted(() => {
   restoreLockedPhoto()
+  restoreLunchState()
   window.addEventListener('pointermove', setPointerGlow, { passive: true })
   window.addEventListener('scroll', markActiveSection, { passive: true })
   window.addEventListener('keydown', onGameKeydown)
@@ -1222,12 +1296,25 @@ onBeforeUnmount(() => {
           <button class="tiny-btn" @click="useLocalLunchOptions">使用本地候选</button>
         </div>
 
+        <div class="lunch-editor">
+          <input
+            v-model="lunchDraft"
+            type="text"
+            placeholder="输入店名或菜品，例如：肉夹馍"
+            @keydown.enter.prevent="addLunchOption"
+          />
+          <button class="tiny-btn" @click="addLunchOption">添加候选</button>
+        </div>
+
         <p class="lunch-result">{{ lunchResult }}</p>
         <p class="lunch-hint">数据源：{{ lunchSource === 'api' ? '数据库/API' : '本地候选列表' }}</p>
         <p class="lunch-hint">{{ lunchStatus }}</p>
 
         <div class="lunch-candidates">
-          <span v-for="(item, idx) in lunchOptions" :key="`${item}-${idx}`">{{ item }}</span>
+          <span v-for="(item, idx) in lunchOptions" :key="`${item}-${idx}`" class="lunch-chip">
+            <em>{{ item }}</em>
+            <button class="chip-remove" :aria-label="`删除候选 ${item}`" @click="removeLunchOption(idx)">×</button>
+          </span>
         </div>
 
         <div v-if="lunchHistory.length" class="lunch-history">

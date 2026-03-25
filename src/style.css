@@ -506,6 +506,31 @@ h2 {
   align-items: center;
 }
 
+.lunch-editor {
+  margin-top: 0.7rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.lunch-editor input {
+  flex: 1 1 260px;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  background: rgba(255, 255, 255, 0.55);
+  color: #1a4468;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.lunch-editor input:focus {
+  border-color: rgba(95, 174, 225, 0.95);
+  box-shadow: 0 0 0 2px rgba(160, 219, 255, 0.45);
+}
+
 .lunch-result {
   margin-top: 0.9rem !important;
   font-family: 'Outfit', sans-serif;
@@ -528,13 +553,38 @@ h2 {
   gap: 0.5rem;
 }
 
-.lunch-candidates span {
+.lunch-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   padding: 0.42rem 0.8rem;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.52);
+}
+
+.lunch-chip em {
+  font-style: normal;
   color: #274361;
   font-weight: 600;
+}
+
+.chip-remove {
+  border: none;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  background: rgba(35, 83, 120, 0.14);
+  color: #1f4f77;
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.chip-remove:hover {
+  background: rgba(35, 83, 120, 0.24);
 }
 
 .lunch-history {
