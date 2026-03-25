@@ -488,6 +488,75 @@ h2 {
   transform: translateY(-4px) scale(1.01);
 }
 
+.lunch-panel {
+  padding: 1rem;
+}
+
+.lunch-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.72;
+}
+
+.lunch-actions {
+  margin-top: 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.lunch-result {
+  margin-top: 0.9rem !important;
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(1.45rem, 3.3vw, 1.95rem);
+  font-weight: 800;
+  color: #0f3f66 !important;
+  letter-spacing: -0.01em;
+}
+
+.lunch-hint {
+  margin-top: 0.35rem !important;
+  color: #2f5a80 !important;
+  font-size: 0.9rem;
+}
+
+.lunch-candidates {
+  margin-top: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.lunch-candidates span {
+  padding: 0.42rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.52);
+  color: #274361;
+  font-weight: 600;
+}
+
+.lunch-history {
+  margin-top: 0.9rem;
+  padding-top: 0.78rem;
+  border-top: 1px dashed rgba(57, 118, 164, 0.3);
+}
+
+.lunch-history h3 {
+  margin: 0 0 0.45rem;
+}
+
+.lunch-history ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.lunch-history li {
+  color: var(--muted);
+  line-height: 1.68;
+}
+
 .upload-panel {
   padding: 1rem;
 }

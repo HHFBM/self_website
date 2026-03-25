@@ -68,6 +68,7 @@ const navItems = [
   { id: 'experience', label: '经历' },
   { id: 'projects', label: '项目' },
   { id: 'hobbies', label: '爱好' },
+  { id: 'lunch', label: '午饭' },
   { id: 'upload', label: '上传' },
   { id: 'contact', label: '联系' },
 ]
@@ -229,6 +230,22 @@ const skills = [
   'MySQL',
 ]
 
+const DEFAULT_LUNCH_OPTIONS = [
+  '麻辣香锅',
+  '黄焖鸡米饭',
+  '牛肉面',
+  '番茄鸡蛋盖饭',
+  '沙县小吃',
+  '兰州拉面',
+  '轻食沙拉',
+  '寿司 / 饭团',
+  '汉堡套餐',
+  '日式咖喱饭',
+  '水饺',
+  '煲仔饭',
+]
+const LUNCH_OPTIONS_API = '/api/lunch-options'
+
 const filter = ref('all')
 const activeSection = ref('hero')
 const activeExperience = ref(experiences[0].id)
@@ -254,6 +271,12 @@ const fastDrop = ref(false)
 const score = ref(0)
 const linesCleared = ref(0)
 const rotationDirection = ref('clockwise')
+const lunchOptions = ref([...DEFAULT_LUNCH_OPTIONS])
+const lunchResult = ref('点击按钮，随机决定今天中午吃什么')
+const lunchHistory = ref([])
+const lunchSource = ref('local')
+const lunchStatus = ref('当前使用本地候选列表，后续可接数据库/API。')
+const isLoadingLunchOptions = ref(false)
 
 let cleanupHeroTilt = null
 let revealObserver = null
@@ -615,6 +638,64 @@ function onHobbyClick(item) {
     return
   }
   document.getElementById('tetris-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+function normalizeLunchOptions(rawOptions) {
+  if (!Array.isArray(rawOptions)) return []
+  return rawOptions
+    .filter(item => typeof item === 'string')
+    .map(item => item.trim())
+    .filter(Boolean)
+}
+
+function pickLunch() {
+  if (!lunchOptions.value.length) {
+    lunchResult.value = '候选列表为空，请先刷新候选列表'
+    return
+  }
+
+  const selected = lunchOptions.value[Math.floor(Math.random() * lunchOptions.value.length)]
+  lunchResult.value = selected
+
+  const pickedAt = new Date().toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+  lunchHistory.value = [`${pickedAt} · ${selected}`, ...lunchHistory.value].slice(0, 6)
+}
+
+function useLocalLunchOptions() {
+  lunchOptions.value = [...DEFAULT_LUNCH_OPTIONS]
+  lunchSource.value = 'local'
+  lunchStatus.value = '已切回本地候选列表。'
+}
+
+async function loadLunchOptionsFromApi() {
+  isLoadingLunchOptions.value = true
+  lunchStatus.value = '正在加载数据库/API候选列表...'
+
+  try {
+    // Later you can point this endpoint to your DB-backed service.
+    const response = await fetch(LUNCH_OPTIONS_API)
+    if (!response.ok) throw new Error(`request failed: ${response.status}`)
+
+    const payload = await response.json()
+    const normalized = normalizeLunchOptions(payload?.options)
+    if (!normalized.length) {
+      throw new Error('empty options')
+    }
+
+    lunchOptions.value = normalized
+    lunchSource.value = 'api'
+    lunchStatus.value = `已从数据库/API加载 ${normalized.length} 个候选项。`
+  } catch {
+    lunchSource.value = 'local'
+    lunchStatus.value = '数据库/API暂不可用，继续使用本地候选列表。'
+    lunchOptions.value = [...DEFAULT_LUNCH_OPTIONS]
+  } finally {
+    isLoadingLunchOptions.value = false
+  }
 }
 
 function onGameKeydown(e) {
@@ -1124,6 +1205,36 @@ onBeforeUnmount(() => {
               <small>按“重新开始”或 Enter 再来一局</small>
             </div>
           </aside>
+        </div>
+      </article>
+    </section>
+
+    <section id="lunch" class="section reveal">
+      <h2>中午吃什么</h2>
+      <article class="lunch-panel liquid-panel">
+        <p>点击按钮随机选择一家饭店或一个午饭品类。当前默认使用本地列表，也支持后续接数据库/API。</p>
+
+        <div class="lunch-actions">
+          <button class="tiny-btn" @click="pickLunch">帮我随机选</button>
+          <button class="tiny-btn" :disabled="isLoadingLunchOptions" @click="loadLunchOptionsFromApi">
+            {{ isLoadingLunchOptions ? '加载中...' : '从数据库/API刷新' }}
+          </button>
+          <button class="tiny-btn" @click="useLocalLunchOptions">使用本地候选</button>
+        </div>
+
+        <p class="lunch-result">{{ lunchResult }}</p>
+        <p class="lunch-hint">数据源：{{ lunchSource === 'api' ? '数据库/API' : '本地候选列表' }}</p>
+        <p class="lunch-hint">{{ lunchStatus }}</p>
+
+        <div class="lunch-candidates">
+          <span v-for="(item, idx) in lunchOptions" :key="`${item}-${idx}`">{{ item }}</span>
+        </div>
+
+        <div v-if="lunchHistory.length" class="lunch-history">
+          <h3>最近随机记录</h3>
+          <ul>
+            <li v-for="(item, idx) in lunchHistory" :key="`${item}-${idx}`">{{ item }}</li>
+          </ul>
         </div>
       </article>
     </section>
