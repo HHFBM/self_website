@@ -330,6 +330,30 @@ const displayBoard = computed(() => {
 })
 
 const boardCells = computed(() => displayBoard.value.flat())
+const nextPieceCells = computed(() => {
+  const size = 4
+  const grid = Array.from({ length: size }, () => Array(size).fill(0))
+  const piece = nextPiece.value
+
+  if (!piece?.matrix?.length) return grid.flat()
+
+  const matrix = piece.matrix
+  const offsetY = Math.floor((size - matrix.length) / 2)
+  const offsetX = Math.floor((size - matrix[0].length) / 2)
+
+  for (let r = 0; r < matrix.length; r += 1) {
+    for (let c = 0; c < matrix[r].length; c += 1) {
+      if (!matrix[r][c]) continue
+      const y = offsetY + r
+      const x = offsetX + c
+      if (y >= 0 && y < size && x >= 0 && x < size) {
+        grid[y][x] = piece.color
+      }
+    }
+  }
+
+  return grid.flat()
+})
 
 const setPointerGlow = e => {
   const x = (e.clientX / window.innerWidth) * 100
@@ -1246,6 +1270,17 @@ onBeforeUnmount(() => {
           </div>
 
           <aside class="tetris-side">
+            <div class="liquid-subpanel next-piece-panel">
+              <span>下一个方块</span>
+              <div class="next-piece-grid" aria-label="next piece preview">
+                <div
+                  v-for="(cell, index) in nextPieceCells"
+                  :key="`next-piece-${index}`"
+                  class="next-piece-cell"
+                  :style="getCellStyle(cell)"
+                ></div>
+              </div>
+            </div>
             <div class="tetris-stat liquid-subpanel">
               <span>分数</span>
               <strong>{{ score }}</strong>
